@@ -4,5 +4,8 @@ Count PRs for,
 * given repo
 * selected repo list
 
-go install github.com/darshanasbg/git-stats
-go run pull-counter.go
+# How to install
+```go install github.com/darshanasbg/git-stats```
+
+# How to run
+```go run pull-counter.go```
