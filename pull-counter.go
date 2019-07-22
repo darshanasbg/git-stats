@@ -19,8 +19,11 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/google/go-github/github"
@@ -31,13 +34,13 @@ import (
 func ListPullRequests(org string, repo string, start time.Time) int {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: ""},
+		&oauth2.Token{AccessToken: "REPLACE_TOKEN"},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 
 	client := github.NewClient(tc)
 
-	fmt.Printf("Time is: " + start.Format(time.RFC3339) + "\n")
+	// fmt.Printf("Time is: " + start.Format(time.RFC3339) + "\n")
 
 	var count int = 0
 	var page int = 1
@@ -81,17 +84,11 @@ func ListPullRequests(org string, repo string, start time.Time) int {
 		// fmt.Printf("PR list: %s\n", prs)
 	}
 
-	fmt.Printf("PR count: %d\n", count)
+	// fmt.Printf("PR count: %d\n", count)
 	return count
 }
 
-func main() {
-	var org string = "wso2"
-	var repo string = "carbon-identity-framework"
-
-	// fmt.Print("Enter GitHub username: ")
-	// fmt.Scanf("%s", &username)
-
+func PrintPRStatsForRepo(org string, repo string) {
 	q3, _ := time.Parse(time.RFC3339, "2019-06-01T00:00:00Z")
 	cq3 := ListPullRequests(org, repo, q3)
 
@@ -101,8 +98,38 @@ func main() {
 	q1, _ := time.Parse(time.RFC3339, "2019-01-01T00:00:00Z")
 	cq1 := ListPullRequests(org, repo, q1)
 
-	fmt.Printf("PR count for org: %s & repo %s\n", org, repo)
-	fmt.Printf("Q2+ = %d\n", cq3)
-	fmt.Printf("Q2 = %d\n", cq2-cq3)
-	fmt.Printf("Q1 = %d\n", cq1-cq2)
+	fmt.Printf("PR count for %s/%s: Q1=%d, Q2=%d, Q2+=%d\n", org, repo, cq1-cq2, cq2-cq3, cq3)
+}
+
+func PrintPRStatsForOrg(org string) {
+	file, err := os.Open("/tmp/" + org + "-repo-list.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		var repo string = scanner.Text()
+		// fmt.Println(repo)
+		PrintPRStatsForRepo(org, repo)
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func main() {
+
+	var org string = "wso2"
+
+	// var repo string = "carbon-identity-framework"
+	// PrintPRStatsForRepo(org, repo)
+
+	PrintPRStatsForOrg(org)
+
+	org = "wso2-extensions"
+	PrintPRStatsForOrg(org)
+
 }
