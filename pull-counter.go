@@ -34,7 +34,7 @@ import (
 func ListPullRequests(org string, repo string, start time.Time) int {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: "REPLACE_TOKEN"},
+		&oauth2.Token{AccessToken: "ACCESS_TOKEN"},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 
@@ -75,8 +75,9 @@ func ListPullRequests(org string, repo string, start time.Time) int {
 
 		if len(prs) > countInCurrentPage {
 			break
+		} else if resp.NextPage == 0 {
+			break
 		} else {
-			// fmt.Printf("Should pull again\n")
 			page = resp.NextPage
 			// fmt.Printf("Should pull page %d\n", page)
 		}
@@ -85,10 +86,11 @@ func ListPullRequests(org string, repo string, start time.Time) int {
 	}
 
 	// fmt.Printf("PR count: %d\n", count)
+	fmt.Printf("..")
 	return count
 }
 
-func PrintPRStatsForRepo(org string, repo string) {
+func PrintPRStatsForRepo(org string, repo string) (int, int, int) {
 	q3, _ := time.Parse(time.RFC3339, "2019-06-01T00:00:00Z")
 	cq3 := ListPullRequests(org, repo, q3)
 
@@ -99,9 +101,15 @@ func PrintPRStatsForRepo(org string, repo string) {
 	cq1 := ListPullRequests(org, repo, q1)
 
 	fmt.Printf("PR count for %s/%s: Q1=%d, Q2=%d, Q2+=%d\n", org, repo, cq1-cq2, cq2-cq3, cq3)
+
+	return cq1 - cq2, cq2 - cq3, cq3
 }
 
-func PrintPRStatsForOrg(org string) {
+func PrintPRStatsForOrg(org string) (int, int, int) {
+	var cq1 int = 0
+	var cq2 int = 0
+	var cq3 int = 0
+
 	file, err := os.Open("/tmp/" + org + "-repo-list.txt")
 	if err != nil {
 		log.Fatal(err)
@@ -112,24 +120,39 @@ func PrintPRStatsForOrg(org string) {
 	for scanner.Scan() {
 		var repo string = scanner.Text()
 		// fmt.Println(repo)
-		PrintPRStatsForRepo(org, repo)
+		q1, q2, q3 := PrintPRStatsForRepo(org, repo)
+
+		cq1 += q1
+		cq2 += q2
+		cq3 += q3
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Printf("PR count for %s: Q1=%d, Q2=%d, Q2+=%d\n", org, cq1, cq2, cq3)
+	return cq1, cq2, cq3
 }
 
 func main() {
+	var cq1 int = 0
+	var cq2 int = 0
+	var cq3 int = 0
 
 	var org string = "wso2"
+	q1, q2, q3 := PrintPRStatsForOrg(org)
 
-	// var repo string = "carbon-identity-framework"
-	// PrintPRStatsForRepo(org, repo)
-
-	PrintPRStatsForOrg(org)
+	cq1 += q1
+	cq2 += q2
+	cq3 += q3
 
 	org = "wso2-extensions"
-	PrintPRStatsForOrg(org)
+	eq1, eq2, eq3 := PrintPRStatsForOrg(org)
 
+	cq1 += eq1
+	cq2 += eq2
+	cq3 += eq3
+
+	fmt.Printf("Total PR count: Q1=%d, Q2=%d, Q2+=%d\n", cq1, cq2, cq3)
 }
